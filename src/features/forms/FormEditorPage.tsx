@@ -30,7 +30,7 @@ import {
 import type { Json } from '@/lib/database.types';
 import { randomId, slugify } from '@/lib/utils';
 import { useAuth } from '@/features/auth/AuthContext';
-import { Button, Card, Field, Input, PageHeader, Select, Spinner, Textarea } from '@/components/ui';
+import { Button, Card, Field, Input, PageHeader, Spinner, Textarea } from '@/components/ui';
 import { ImageUpload } from '@/components/ImageUpload';
 
 const FIELD_TYPES: Array<{ type: FormFieldType; label: string; icon: typeof Type }> = [

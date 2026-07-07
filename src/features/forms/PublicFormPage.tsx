@@ -28,7 +28,11 @@ export function PublicFormPage() {
       .eq('slug', slug)
       .eq('is_published', true)
       .maybeSingle()
-      .then(({ data }) => setForm(data ?? 'not_found'));
+      .then(
+        ({ data }) => setForm(data ?? 'not_found'),
+        // Network failure must not leave visitors on an infinite spinner.
+        () => setForm('not_found'),
+      );
   }, [slug]);
 
   const {
@@ -79,7 +83,7 @@ export function PublicFormPage() {
         } else if (Array.isArray(raw)) {
           data[field.id] = raw;
         } else {
-          data[field.id] = raw ?? '';
+          data[field.id] = typeof raw === 'string' ? raw : '';
         }
       }
       const { error } = await supabase

@@ -101,6 +101,13 @@ export type HostBroadcast =
       startedAt: number;
     }
   | {
+      /** Lightweight live tick while a question is open — powers "X answered" counters */
+      type: 'progress';
+      index: number;
+      answered: number;
+      totalPlayers: number;
+    }
+  | {
       type: 'reveal';
       index: number;
       correctIndexes: number[];
