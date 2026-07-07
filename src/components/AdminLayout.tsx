@@ -9,8 +9,10 @@ import {
   LogOut,
   Menu,
   X,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
+import { ChangePasswordModal } from '@/features/auth/ChangePasswordModal';
 import { Spinner } from './ui';
 import { cn } from '@/lib/utils';
 import { ROLE_LABELS } from '@/lib/types';
@@ -52,6 +54,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { profile, role, signOut } = useAuth();
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   return (
     <div className="flex h-full flex-col gap-6 p-4">
       <div className="flex items-center gap-3 px-1 pt-1">
@@ -70,6 +73,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <p className="text-[11px] text-teal-300">{role ? ROLE_LABELS[role] : ''}</p>
         </div>
         <button
+          onClick={() => setChangePasswordOpen(true)}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-navy-100 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <KeyRound size={18} />
+          Змінити пароль
+        </button>
+        <button
           onClick={() => void signOut()}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-navy-100 transition-colors hover:bg-white/5 hover:text-white"
         >
@@ -77,6 +87,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           Вийти
         </button>
       </div>
+      <ChangePasswordModal open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
     </div>
   );
 }

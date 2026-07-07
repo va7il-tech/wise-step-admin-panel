@@ -10,15 +10,26 @@ interface LoginForm {
   password: string;
 }
 
+interface ResetForm {
+  email: string;
+}
+
 export function LoginPage() {
   const { session, loading } = useAuth();
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>();
+  const {
+    register: registerReset,
+    handleSubmit: handleResetSubmit,
+    formState: { errors: resetErrors, isSubmitting: resetSubmitting },
+  } = useForm<ResetForm>();
 
   if (!loading && session) {
     const from = (location.state as { from?: string } | null)?.from ?? '/';
@@ -35,6 +46,18 @@ export function LoginPage() {
           : authError.message,
       );
     }
+  };
+
+  const onReset = async ({ email }: ResetForm) => {
+    setError(null);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/accept-invite`,
+    });
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+    setResetSent(true);
   };
 
   return (
@@ -55,32 +78,71 @@ export function LoginPage() {
               вкажіть ключі проєкту.
             </p>
           )}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <Field label="Електронна пошта" required error={errors.email?.message}>
-              <Input
-                type="email"
-                autoComplete="email"
-                placeholder="you@wise-step.org"
-                {...register('email', { required: 'Вкажіть пошту' })}
-              />
-            </Field>
-            <Field label="Пароль" required error={errors.password?.message}>
-              <Input
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                {...register('password', { required: 'Вкажіть пароль' })}
-              />
-            </Field>
-            {error && (
-              <p className="rounded-xl bg-error-50 p-3 text-sm font-medium text-error-700">
-                {error}
+          {resetMode ? (
+            resetSent ? (
+              <p className="text-sm text-mist-600">
+                Якщо такий обліковий запис існує, на пошту надіслано посилання для встановлення
+                нового пароля.
               </p>
-            )}
-            <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
-              Увійти
-            </Button>
-          </form>
+            ) : (
+              <form onSubmit={handleResetSubmit(onReset)} className="space-y-4" noValidate>
+                <Field label="Електронна пошта" required error={resetErrors.email?.message}>
+                  <Input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@wise-step.org"
+                    {...registerReset('email', { required: 'Вкажіть пошту' })}
+                  />
+                </Field>
+                {error && (
+                  <p className="rounded-xl bg-error-50 p-3 text-sm font-medium text-error-700">
+                    {error}
+                  </p>
+                )}
+                <Button type="submit" className="w-full" size="lg" loading={resetSubmitting}>
+                  Надіслати посилання
+                </Button>
+              </form>
+            )
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+              <Field label="Електронна пошта" required error={errors.email?.message}>
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@wise-step.org"
+                  {...register('email', { required: 'Вкажіть пошту' })}
+                />
+              </Field>
+              <Field label="Пароль" required error={errors.password?.message}>
+                <Input
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  {...register('password', { required: 'Вкажіть пароль' })}
+                />
+              </Field>
+              {error && (
+                <p className="rounded-xl bg-error-50 p-3 text-sm font-medium text-error-700">
+                  {error}
+                </p>
+              )}
+              <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
+                Увійти
+              </Button>
+            </form>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setResetSent(false);
+              setResetMode((v) => !v);
+            }}
+            className="mt-4 text-xs font-medium text-teal-600 hover:underline"
+          >
+            {resetMode ? 'Повернутися до входу' : 'Забули пароль?'}
+          </button>
         </Card>
 
         <p className="mt-6 text-center text-xs text-navy-300">
