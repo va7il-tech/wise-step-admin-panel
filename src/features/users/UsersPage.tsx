@@ -65,7 +65,13 @@ export function UsersPage() {
   const invite = async (values: InviteForm) => {
     setInviteError(null);
     const { data, error } = await supabase.functions.invoke('admin-users', {
-      body: { action: 'invite', email: values.email, fullName: values.fullName, role: values.role },
+      body: {
+        action: 'invite',
+        email: values.email,
+        fullName: values.fullName,
+        role: values.role,
+        redirectTo: `${window.location.origin}/accept-invite`,
+      },
     });
     const serverError = (data as { error?: string } | null)?.error;
     if (error || serverError) {

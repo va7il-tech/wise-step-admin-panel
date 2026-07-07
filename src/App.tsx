@@ -7,6 +7,9 @@ import { Spinner } from '@/components/ui';
 const LoginPage = lazy(() =>
   import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })),
 );
+const AcceptInvitePage = lazy(() =>
+  import('@/features/auth/AcceptInvitePage').then((m) => ({ default: m.AcceptInvitePage })),
+);
 const DashboardPage = lazy(() =>
   import('@/app/DashboardPage').then((m) => ({ default: m.DashboardPage })),
 );
@@ -65,6 +68,7 @@ export default function App() {
             <Route path="/play" element={<PlayPage />} />
             <Route path="/play/:code" element={<PlayPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
             {/* Projector view — authenticated, but outside the admin shell */}
             <Route path="/screen/:sessionId" element={<BigScreenPage />} />

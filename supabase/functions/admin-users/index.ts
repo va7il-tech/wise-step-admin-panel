@@ -55,12 +55,13 @@ Deno.serve(async (req) => {
     const body = await req.json();
 
     if (body.action === 'invite') {
-      const { email, role, fullName } = body;
+      const { email, role, fullName, redirectTo } = body;
       if (!email || !['super_admin', 'editor', 'viewer'].includes(role)) {
         return json({ error: 'Некоректні дані запрошення' }, 400);
       }
       const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
         data: { role, full_name: fullName ?? '' },
+        redirectTo,
       });
       if (error) return json({ error: error.message }, 400);
       return json({ user: data.user });
