@@ -10,6 +10,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Role = 'super_admin' | 'editor' | 'viewer';
 export type SessionStatus = 'lobby' | 'active' | 'finished';
 export type ProjectStatus = 'ongoing' | 'one_time' | 'campaign';
+export type ProjectLifecycle = 'active' | 'upcoming';
 
 export interface Database {
   public: {
@@ -257,6 +258,18 @@ export interface Database {
           current_amount: number | null;
           donors_count: number | null;
           external_donate_url: string | null;
+          slug: string | null;
+          sort_order: number;
+          featured: boolean;
+          badge: string | null;
+          lifecycle: ProjectLifecycle | null;
+          main_image_alt: string | null;
+          currency: string;
+          progress_visible: boolean;
+          progress_percent: number | null;
+          amount_left: number | null;
+          deadline_days: number | null;
+          presentation: Json;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -278,6 +291,18 @@ export interface Database {
           current_amount?: number | null;
           donors_count?: number | null;
           external_donate_url?: string | null;
+          slug?: string | null;
+          sort_order?: number;
+          featured?: boolean;
+          badge?: string | null;
+          lifecycle?: ProjectLifecycle | null;
+          main_image_alt?: string | null;
+          currency?: string;
+          progress_visible?: boolean;
+          progress_percent?: number | null;
+          amount_left?: number | null;
+          deadline_days?: number | null;
+          presentation?: Json;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -299,6 +324,18 @@ export interface Database {
           current_amount?: number | null;
           donors_count?: number | null;
           external_donate_url?: string | null;
+          slug?: string | null;
+          sort_order?: number;
+          featured?: boolean;
+          badge?: string | null;
+          lifecycle?: ProjectLifecycle | null;
+          main_image_alt?: string | null;
+          currency?: string;
+          progress_visible?: boolean;
+          progress_percent?: number | null;
+          amount_left?: number | null;
+          deadline_days?: number | null;
+          presentation?: Json;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
