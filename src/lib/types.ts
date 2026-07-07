@@ -170,6 +170,12 @@ export const PROJECT_STATUS_LABELS: Record<string, string> = {
   campaign: 'Кампанія',
 };
 
+// Live lifecycle shown on wise-step.org (distinct from the status "kind" above).
+export const PROJECT_LIFECYCLE_LABELS: Record<string, string> = {
+  active: 'Активний',
+  upcoming: 'Незабаром',
+};
+
 /* ---------- Roles ---------- */
 
 export const ROLE_LABELS: Record<string, string> = {
