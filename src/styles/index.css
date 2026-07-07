@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Golos Text', ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand palette derived from public/logo.svg */
+  --color-navy-50: #f0f4f8;
+  --color-navy-100: #d9e2ec;
+  --color-navy-200: #b3c5d7;
+  --color-navy-300: #7d9ab5;
+  --color-navy-400: #4a6f8f;
+  --color-navy-500: #2c4a63;
+  --color-navy-600: #1f3648;
+  --color-navy-700: #152837; /* logo navy */
+  --color-navy-800: #0f1e2a;
+  --color-navy-900: #0a141c;
+
+  --color-teal-50: #e6fbfb;
+  --color-teal-100: #c2f4f4;
+  --color-teal-200: #85e8e7;
+  --color-teal-300: #47d8d7;
+  --color-teal-400: #1cc7c6;
+  --color-teal-500: #01b5b4; /* logo teal */
+  --color-teal-600: #01918f;
+  --color-teal-700: #027271;
+  --color-teal-800: #045857;
+  --color-teal-900: #064241;
+
+  --color-mist-50: #fafafa;
+  --color-mist-100: #f2f2f2;
+  --color-mist-200: #e6e6e6;
+  --color-mist-300: #dbdbdb; /* logo mist */
+  --color-mist-400: #b8b8b8;
+  --color-mist-500: #949494;
+  --color-mist-600: #6e6e6e;
+  --color-mist-700: #525252;
+
+  /* Accent gold — reserved for donation / fundraising CTAs only */
+  --color-gold-100: #fdf3d1;
+  --color-gold-300: #f8d878;
+  --color-gold-500: #f2b705;
+  --color-gold-600: #d19e02;
+  --color-gold-700: #a67d02;
+
+  --color-success-50: #e9f9f0;
+  --color-success-500: #16a06a;
+  --color-success-700: #0e714b;
+
+  --color-error-50: #fdecec;
+  --color-error-500: #dd4646;
+  --color-error-700: #a92f2f;
+
+  --shadow-card: 0 1px 3px rgb(21 40 55 / 0.06), 0 4px 16px rgb(21 40 55 / 0.06);
+  --shadow-card-hover: 0 2px 6px rgb(21 40 55 / 0.08), 0 10px 28px rgb(21 40 55 / 0.1);
+
+  --radius-card: 1rem;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  @apply bg-mist-50 text-navy-700 font-sans;
+}
+
+/* Countdown bar animation for quiz questions */
+@keyframes countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.25s ease-out both;
+}
