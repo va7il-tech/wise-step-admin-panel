@@ -158,6 +158,9 @@ export function ProjectsListPage() {
                     <Badge tone={STATUS_TONES[project.status]}>
                       {PROJECT_STATUS_LABELS[project.status]}
                     </Badge>
+                    <Badge tone={project.published ? 'success' : 'gold'}>
+                      {project.published ? 'Опубліковано' : 'Чернетка'}
+                    </Badge>
                   </div>
                   <h3 className="font-semibold leading-snug text-navy-700">{project.title}</h3>
                   <p className="line-clamp-2 text-sm text-mist-600">{project.short_description}</p>

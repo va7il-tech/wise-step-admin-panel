@@ -176,6 +176,22 @@ export const PROJECT_LIFECYCLE_LABELS: Record<string, string> = {
   upcoming: 'Незабаром',
 };
 
+// Gradient theme classes used by the public site's project cards/popups
+// (presentation.color_class). Values transcribed from the live seed.
+export const COLOR_CLASS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'g-teal', label: 'Бірюзовий' },
+  { value: 'g-warm', label: 'Теплий' },
+  { value: 'g-pink', label: 'Рожевий' },
+  { value: 'g-olive', label: 'Оливковий' },
+  { value: 'g-blue', label: 'Синій' },
+  { value: 'g-yellow', label: 'Жовтий' },
+  { value: 'g-orange', label: 'Помаранчевий' },
+  { value: 'g-purple', label: 'Фіолетовий' },
+  { value: 'g-navy', label: 'Темно-синій' },
+  { value: 'g-green', label: 'Зелений' },
+  { value: 'g-tan', label: 'Пісочний' },
+];
+
 /* ---------- Roles ---------- */
 
 export const ROLE_LABELS: Record<string, string> = {

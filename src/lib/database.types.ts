@@ -261,6 +261,7 @@ export interface Database {
           slug: string | null;
           sort_order: number;
           featured: boolean;
+          published: boolean;
           badge: string | null;
           lifecycle: ProjectLifecycle | null;
           main_image_alt: string | null;
@@ -294,6 +295,7 @@ export interface Database {
           slug?: string | null;
           sort_order?: number;
           featured?: boolean;
+          published?: boolean;
           badge?: string | null;
           lifecycle?: ProjectLifecycle | null;
           main_image_alt?: string | null;
@@ -327,6 +329,7 @@ export interface Database {
           slug?: string | null;
           sort_order?: number;
           featured?: boolean;
+          published?: boolean;
           badge?: string | null;
           lifecycle?: ProjectLifecycle | null;
           main_image_alt?: string | null;
