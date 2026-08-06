@@ -32,6 +32,7 @@ import { randomId, slugify } from '@/lib/utils';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Button, Card, Field, Input, PageHeader, Spinner, Textarea } from '@/components/ui';
 import { ImageUpload } from '@/components/ImageUpload';
+import { AttachmentUpload } from '@/components/AttachmentUpload';
 
 const FIELD_TYPES: Array<{ type: FormFieldType; label: string; icon: typeof Type }> = [
   { type: 'text', label: 'Текст', icon: Type },
@@ -222,6 +223,20 @@ export function FormEditorPage() {
                 onChange={(e) => setStyle((s) => ({ ...s, description: e.target.value }))}
               />
             </Field>
+          </Card>
+
+          <Card className="space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-navy-600">Файли для учасників</p>
+              <p className="text-xs text-mist-600">
+                Правила, бланки заяв тощо. Люди зможуть переглянути й завантажити їх перед
+                заповненням форми.
+              </p>
+            </div>
+            <AttachmentUpload
+              value={style.attachments}
+              onChange={(attachments) => setStyle((s) => ({ ...s, attachments }))}
+            />
           </Card>
 
           {fields.map((field, index) => {

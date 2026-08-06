@@ -1,12 +1,19 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm, type FieldError } from 'react-hook-form';
-import { CheckCircle2, Loader2, SearchX } from 'lucide-react';
+import { CheckCircle2, Download, FileText, Loader2, SearchX } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { parseFormSchema, parseFormStyle, type FormField, type FormSchema, type FormStyle } from '@/lib/types';
+import {
+  DEFAULT_FORM_STYLE,
+  parseFormSchema,
+  parseFormStyle,
+  type FormField,
+  type FormSchema,
+  type FormStyle,
+} from '@/lib/types';
 import type { Json, Tables } from '@/lib/database.types';
-import { uploadFormFile } from '@/lib/storage';
-import { cn } from '@/lib/utils';
+import { attachmentDownloadUrl, uploadFormFile } from '@/lib/storage';
+import { cn, formatBytes } from '@/lib/utils';
 
 type FormValues = Record<string, string | string[] | FileList | undefined>;
 
@@ -51,7 +58,7 @@ export function PublicFormPage() {
 
   if (form === 'not_found') {
     return (
-      <PublicShell style={{ accentColor: '#01B5B4', showLogo: true }}>
+      <PublicShell style={DEFAULT_FORM_STYLE}>
         <div className="flex flex-col items-center gap-3 py-10 text-center">
           <SearchX size={40} className="text-mist-400" />
           <h1 className="text-lg font-bold text-navy-700">Форму не знайдено</h1>
@@ -108,6 +115,39 @@ export function PublicFormPage() {
       )}
       <h1 className="text-xl font-bold leading-snug text-navy-700 sm:text-2xl">{form.title}</h1>
       {style.description && <p className="mt-2 text-sm text-mist-600">{style.description}</p>}
+
+      {style.attachments.length > 0 && (
+        <div className="mt-5 space-y-2">
+          {style.attachments.map((attachment) => (
+            <div
+              key={attachment.id}
+              className="flex items-center gap-3 rounded-xl border border-mist-300 px-4 py-3"
+            >
+              <FileText size={18} className="shrink-0 text-(--accent)" />
+              <a
+                href={attachment.url}
+                target="_blank"
+                rel="noreferrer"
+                className="min-w-0 flex-1 hover:underline"
+              >
+                <span className="block truncate text-sm font-medium text-navy-700">
+                  {attachment.name}
+                </span>
+                {attachment.size !== undefined && (
+                  <span className="text-xs text-mist-500">{formatBytes(attachment.size)}</span>
+                )}
+              </a>
+              <a
+                href={attachmentDownloadUrl(attachment.url, attachment.name)}
+                aria-label={`Завантажити ${attachment.name}`}
+                className="shrink-0 rounded-lg p-2 text-mist-600 transition-colors hover:bg-mist-100 hover:text-navy-700"
+              >
+                <Download size={18} />
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
 
       {submitted ? (
         <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl bg-success-50 px-5 py-10 text-center">

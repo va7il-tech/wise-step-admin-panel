@@ -28,16 +28,29 @@ export interface FormSchema {
   fields: FormField[];
 }
 
+/** A document the admin attaches to a form (rules, blank application) for visitors to download. */
+export interface FormAttachment {
+  id: string;
+  /** Public URL in the `media` bucket */
+  url: string;
+  /** Original file name shown to the visitor */
+  name: string;
+  /** Bytes, for the size hint next to the name */
+  size?: number;
+}
+
 export interface FormStyle {
   accentColor: string;
   showLogo: boolean;
   description?: string;
   coverImage?: string;
+  attachments: FormAttachment[];
 }
 
 export const DEFAULT_FORM_STYLE: FormStyle = {
   accentColor: '#01B5B4',
   showLogo: true,
+  attachments: [],
 };
 
 export function parseFormSchema(json: Json): FormSchema {
@@ -52,10 +65,21 @@ export function parseFormSchema(json: Json): FormSchema {
   return { fields: [] };
 }
 
+/** Forms saved before attachments existed have no `attachments` key, so narrow defensively. */
+function parseFormAttachments(value: unknown): FormAttachment[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is FormAttachment => {
+    if (!item || typeof item !== 'object') return false;
+    const a = item as Partial<FormAttachment>;
+    return typeof a.url === 'string' && typeof a.name === 'string' && typeof a.id === 'string';
+  });
+}
+
 export function parseFormStyle(json: Json): FormStyle {
   const value = json as unknown;
   if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return { ...DEFAULT_FORM_STYLE, ...(value as Partial<FormStyle>) };
+    const style = { ...DEFAULT_FORM_STYLE, ...(value as Partial<FormStyle>) };
+    return { ...style, attachments: parseFormAttachments(style.attachments) };
   }
   return { ...DEFAULT_FORM_STYLE };
 }

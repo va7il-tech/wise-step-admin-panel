@@ -60,6 +60,14 @@ export function formatUah(amount: number): string {
   }).format(amount);
 }
 
+export function formatBytes(bytes: number): string {
+  const format = (value: number) =>
+    new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 1 }).format(value);
+  if (bytes < 1024) return `${format(bytes)} Б`;
+  if (bytes < 1024 * 1024) return `${format(bytes / 1024)} КБ`;
+  return `${format(bytes / (1024 * 1024))} МБ`;
+}
+
 /** CSV export with UTF-8 BOM so Excel opens Ukrainian text correctly. */
 export function downloadCsv(fileName: string, headers: string[], rows: string[][]): void {
   const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
