@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { Check, Loader2, PartyPopper, Pencil, X } from 'lucide-react';
+import { Check, Loader2, Minus, PartyPopper, Pencil, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   GAME_EVENT,
   PLAYER_EVENT,
+  answerVerdict,
   gameChannelName,
-  sameAnswerSet,
   sanitizeNickname,
+  type AnswerVerdict,
   type HostBroadcast,
   type LeaderboardEntry,
   type LiveQuestion,
@@ -31,7 +32,7 @@ type Stage =
   | { kind: 'answered'; index: number }
   | {
       kind: 'result';
-      correct: boolean;
+      verdict: AnswerVerdict;
       gained: number;
       score: number;
       rank: number;
@@ -187,7 +188,7 @@ export function PlayPage() {
               const myAnswer = lastSelectedRef.current;
               setStage({
                 kind: 'result',
-                correct: myAnswer !== null && sameAnswerSet(myAnswer, msg.correctIndexes),
+                verdict: answerVerdict(myAnswer, msg.correctIndexes),
                 gained: mine?.lastGain ?? 0,
                 score: mine?.score ?? 0,
                 rank: rank || msg.leaderboard.length,
@@ -563,30 +564,36 @@ export function PlayPage() {
   }
 
   if (stage.kind === 'result') {
-    const { question, correctIndexes, myAnswer } = stage;
+    const { question, correctIndexes, myAnswer, verdict } = stage;
     // A correct player's own picks are exactly the row(s) already listed above,
     // so only echo the answer back when it differed.
-    const showMyAnswer = !stage.correct;
+    const showMyAnswer = verdict !== 'correct';
+    const VerdictIcon = verdict === 'correct' ? Check : verdict === 'partial' ? Minus : X;
     return (
       <div
         className={cn(
           // Scrolls rather than clips: six options plus both blocks can outgrow a short phone.
           'flex min-h-dvh flex-col overflow-y-auto px-6 py-8 text-center',
-          stage.correct ? 'bg-success-700' : 'bg-error-700',
+          verdict === 'correct' && 'bg-success-700',
+          verdict === 'partial' && 'bg-warning-700',
+          verdict === 'wrong' && 'bg-error-700',
         )}
       >
         <div className="m-auto flex w-full max-w-sm flex-col items-center gap-4">
           <div className="flex size-20 items-center justify-center rounded-full bg-white/20">
-            {stage.correct ? (
-              <Check size={44} className="text-white" strokeWidth={3} />
-            ) : (
-              <X size={44} className="text-white" strokeWidth={3} />
-            )}
+            <VerdictIcon size={44} className="text-white" strokeWidth={3} />
           </div>
           <h1 className="text-2xl font-black text-white">
-            {stage.correct ? 'Правильно!' : 'Не цього разу'}
+            {verdict === 'correct' ? 'Правильно!' : verdict === 'partial' ? 'Майже!' : 'Не цього разу'}
           </h1>
-          {stage.correct && <p className="text-xl font-bold text-white/90">+{stage.gained}</p>}
+          {verdict === 'partial' && (
+            <p className="-mt-2 text-sm font-semibold text-white/80">
+              {correctIndexes.some((i) => !(myAnswer ?? []).includes(i))
+                ? 'Ви вибрали не всі правильні відповіді'
+                : 'Серед ваших відповідей є зайва'}
+            </p>
+          )}
+          {verdict === 'correct' && <p className="text-xl font-bold text-white/90">+{stage.gained}</p>}
 
           {question && (
             <div className="w-full space-y-2 text-left">

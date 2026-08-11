@@ -221,6 +221,23 @@ export function sameAnswerSet(a: number[], b: number[]): boolean {
   return sa.every((v, i) => v === sb[i]);
 }
 
+/** How a player's picks landed against the correct set, for the reveal screen. */
+export type AnswerVerdict = 'correct' | 'partial' | 'wrong';
+
+/**
+ * `partial` means they found at least one correct option but not the exact set — either
+ * they missed some, or mixed a wrong one in. Presentation only: scoring stays
+ * all-or-nothing (see `reveal` in HostSessionPage), so a partial answer still earns 0.
+ */
+export function answerVerdict(
+  selected: number[] | null,
+  correctIndexes: number[],
+): AnswerVerdict {
+  if (!selected || selected.length === 0) return 'wrong';
+  if (sameAnswerSet(selected, correctIndexes)) return 'correct';
+  return selected.some((i) => correctIndexes.includes(i)) ? 'partial' : 'wrong';
+}
+
 /* ---------- Projects ---------- */
 
 export const PROJECT_STATUS_LABELS: Record<string, string> = {
