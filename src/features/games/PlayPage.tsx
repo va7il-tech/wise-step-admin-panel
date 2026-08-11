@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { Check, Loader2, PartyPopper, X } from 'lucide-react';
+import { Check, Loader2, PartyPopper, Pencil, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   GAME_EVENT,
   PLAYER_EVENT,
   gameChannelName,
   sameAnswerSet,
+  sanitizeNickname,
   type HostBroadcast,
   type LeaderboardEntry,
   type LiveQuestion,
@@ -59,8 +60,17 @@ export function PlayPage() {
   const [joining, setJoining] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [checking, setChecking] = useState(Boolean(code));
+  /** Own name, mirrored into state because playerRef alone never re-renders. */
+  const [displayName, setDisplayName] = useState('');
+  /** Once the host starts the game, only the host may rename players. */
+  const [started, setStarted] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [renamePending, setRenamePending] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const renameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerRef = useRef<StoredPlayer | null>(null);
   const questionShownAtRef = useRef(0);
   const answeredIndexRef = useRef(-1);
@@ -94,10 +104,13 @@ export function PlayPage() {
         setStage({ kind: 'enter-code' });
         return;
       }
+      setStarted(session.status !== 'lobby');
       const stored = sessionStorage.getItem(storageKey(code));
       if (stored) {
         // Rejoining after a refresh — reconnect with the same identity.
-        playerRef.current = JSON.parse(stored) as StoredPlayer;
+        const player = JSON.parse(stored) as StoredPlayer;
+        playerRef.current = player;
+        setDisplayName(player.nickname);
         setStage({ kind: 'waiting' });
         return;
       }
@@ -122,7 +135,23 @@ export function PlayPage() {
           const msg = payload as HostBroadcast;
           const me = playerRef.current;
           if (!me) return;
+          // Anything past the lobby means the host has started: renaming is theirs now.
+          if (msg.type !== 'lobby' && msg.type !== 'renamed') setStarted(true);
           switch (msg.type) {
+            case 'renamed': {
+              if (msg.playerId !== me.playerId) break;
+              const updated: StoredPlayer = { ...me, nickname: msg.nickname };
+              playerRef.current = updated;
+              sessionStorage.setItem(storageKey(roomCode), JSON.stringify(updated));
+              // The big screen builds its lobby list from presence, so re-announce.
+              void channel.track({ playerId: updated.playerId, nickname: updated.nickname });
+              if (renameTimerRef.current) clearTimeout(renameTimerRef.current);
+              setDisplayName(msg.nickname);
+              setRenamePending(false);
+              setRenameError(null);
+              setRenameOpen(false);
+              break;
+            }
             case 'lobby':
               if (
                 stageRef.current.kind === 'waiting' ||
@@ -204,7 +233,7 @@ export function PlayPage() {
 
   const join = async () => {
     if (stage.kind !== 'enter-nickname') return;
-    const name = nickname.trim();
+    const name = sanitizeNickname(nickname);
     if (!name) {
       setError('Введіть імʼя, яке побачать інші гравці');
       return;
@@ -213,7 +242,7 @@ export function PlayPage() {
     setJoining(true);
     const { data, error: joinError } = await supabase
       .from('game_players')
-      .insert({ session_id: stage.sessionId, nickname: name.slice(0, 24) })
+      .insert({ session_id: stage.sessionId, nickname: name })
       .select('id')
       .single();
     setJoining(false);
@@ -223,10 +252,49 @@ export function PlayPage() {
     }
     const player: StoredPlayer = { playerId: data.id, nickname: name, sessionId: stage.sessionId };
     playerRef.current = player;
+    setDisplayName(name);
     sessionStorage.setItem(storageKey(stage.roomCode), JSON.stringify(player));
     // The channel effect below reconnects now that we have an identity.
     setStage({ kind: 'waiting' });
   };
+
+  /**
+   * Renaming is host-authoritative: we only ask, the host writes the row and
+   * confirms with a `renamed` broadcast. Requests sent after the start are ignored.
+   */
+  const requestRename = () => {
+    const me = playerRef.current;
+    if (!me) return;
+    const name = sanitizeNickname(renameValue);
+    if (!name) {
+      setRenameError('Введіть імʼя');
+      return;
+    }
+    if (name === me.nickname) {
+      setRenameOpen(false);
+      return;
+    }
+    if (!channelRef.current) {
+      setRenameError('Немає звʼязку з грою. Спробуйте ще раз.');
+      return;
+    }
+    setRenameError(null);
+    setRenamePending(true);
+    void channelRef.current.send({
+      type: 'broadcast',
+      event: PLAYER_EVENT,
+      payload: { type: 'rename', playerId: me.playerId, nickname: name },
+    });
+    if (renameTimerRef.current) clearTimeout(renameTimerRef.current);
+    renameTimerRef.current = setTimeout(() => {
+      setRenamePending(false);
+      setRenameError('Не вдалося змінити імʼя. Спробуйте ще раз.');
+    }, 4000);
+  };
+
+  useEffect(() => () => {
+    if (renameTimerRef.current) clearTimeout(renameTimerRef.current);
+  }, []);
 
   const submitAnswer = (indexes: number[]) => {
     if (stage.kind !== 'question') return;
@@ -358,9 +426,66 @@ export function PlayPage() {
           </span>
           <h1 className="text-xl font-bold text-white">Ви в грі!</h1>
           {stage.quizTitle && <p className="text-navy-200">{stage.quizTitle}</p>}
-          <p className="text-sm text-navy-300">
-            {playerRef.current?.nickname} · чекаємо на початок…
-          </p>
+          {renameOpen ? (
+            <form
+              className="flex w-full flex-col gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                requestRename();
+              }}
+            >
+              <input
+                value={renameValue}
+                onChange={(e) => {
+                  setRenameValue(e.target.value);
+                  setRenameError(null);
+                }}
+                maxLength={24}
+                autoFocus
+                placeholder="Ваше імʼя"
+                className="h-14 w-full rounded-2xl border-2 border-transparent bg-white text-center text-xl font-bold text-navy-700 placeholder:text-base placeholder:font-medium placeholder:text-mist-500 focus:border-teal-400 focus:outline-none"
+              />
+              {renameError && (
+                <p className="text-center text-sm font-medium text-error-500">{renameError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRenameOpen(false);
+                    setRenameError(null);
+                  }}
+                  className="h-12 flex-1 rounded-2xl bg-white/10 font-semibold text-white hover:bg-white/20"
+                >
+                  Скасувати
+                </button>
+                <button
+                  type="submit"
+                  disabled={renamePending}
+                  className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-teal-500 font-bold text-white transition-colors hover:bg-teal-600 disabled:opacity-60"
+                >
+                  {renamePending && <Loader2 size={18} className="animate-spin" />}
+                  Зберегти
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <p className="text-sm text-navy-300">{displayName} · чекаємо на початок…</p>
+              {!started && (
+                <button
+                  onClick={() => {
+                    setRenameValue(playerRef.current?.nickname ?? '');
+                    setRenameError(null);
+                    setRenameOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
+                >
+                  <Pencil size={14} /> Змінити імʼя
+                </button>
+              )}
+            </>
+          )}
         </div>
       </Shell>
     );

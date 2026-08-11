@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Flag,
   MonitorPlay,
+  Pencil,
   QrCode,
   Trophy,
   Users,
@@ -19,6 +20,7 @@ import {
   computeScore,
   gameChannelName,
   sameAnswerSet,
+  sanitizeNickname,
   type HostBroadcast,
   type LeaderboardEntry,
   type PlayerBroadcast,
@@ -28,6 +30,7 @@ import { Badge, Button, Card, PageHeader, Spinner } from '@/components/ui';
 import { ShareModal } from '@/components/ShareModal';
 import { optionStyle } from './optionStyles';
 import { CountdownRing } from './CountdownRing';
+import { PlayersModal } from './PlayersModal';
 
 type Session = Tables<'game_sessions'>;
 type Quiz = Tables<'quizzes'>;
@@ -56,6 +59,7 @@ export function HostSessionPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [playersOpen, setPlayersOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // Authoritative mutable state, kept in refs so realtime handlers never see stale closures.
@@ -70,10 +74,19 @@ export function HostSessionPage() {
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastBroadcastRef = useRef<HostBroadcast | null>(null);
 
-  const broadcast = useCallback((payload: HostBroadcast) => {
-    lastBroadcastRef.current = payload;
+  /** Fire-and-forget send. Used for side messages (renames) that must not become the replay state. */
+  const sendGame = useCallback((payload: HostBroadcast) => {
     void channelRef.current?.send({ type: 'broadcast', event: GAME_EVENT, payload });
   }, []);
+
+  /** Sends and remembers the payload, so reconnecting clients can be caught up with it. */
+  const broadcast = useCallback(
+    (payload: HostBroadcast) => {
+      lastBroadcastRef.current = payload;
+      sendGame(payload);
+    },
+    [sendGame],
+  );
 
   const buildLeaderboard = useCallback((): LeaderboardEntry[] => {
     return playersRef.current
@@ -101,6 +114,42 @@ export function HostSessionPage() {
       }
     }
   }, [sessionId]);
+
+  /**
+   * The host is the only writer of game_players, so every rename lands here —
+   * whether the host typed it or a player asked for it over the channel.
+   * Resolves to an error message, or null on success.
+   */
+  const renamePlayer = useCallback(
+    async (playerId: string, raw: string): Promise<string | null> => {
+      const nickname = sanitizeNickname(raw);
+      if (!nickname) return 'Імʼя не може бути порожнім';
+      let current = playersRef.current.find((p) => p.id === playerId);
+      if (!current) {
+        // Someone who joined seconds ago may not be in our list yet.
+        await refreshPlayers();
+        current = playersRef.current.find((p) => p.id === playerId);
+      }
+      // Never touch a row that does not belong to this session.
+      if (!current) return 'Гравця не знайдено';
+      if (current.nickname === nickname) return null;
+
+      const { error } = await supabase
+        .from('game_players')
+        .update({ nickname })
+        .eq('id', playerId);
+      if (error) return 'Не вдалося змінити імʼя';
+
+      playersRef.current = playersRef.current.map((p) =>
+        p.id === playerId ? { ...p, nickname } : p,
+      );
+      setPlayers(playersRef.current);
+      setLeaderboard(buildLeaderboard());
+      sendGame({ type: 'renamed', playerId, nickname });
+      return null;
+    },
+    [buildLeaderboard, refreshPlayers, sendGame],
+  );
 
   const reveal = useCallback(async () => {
     if (phaseRef.current !== 'question') return;
@@ -290,7 +339,15 @@ export function HostSessionPage() {
       .on('broadcast', { event: PLAYER_EVENT }, ({ payload }) => {
         const msg = payload as PlayerBroadcast;
         if (msg.type === 'hello') {
-          void refreshPlayers();
+          void (async () => {
+            await refreshPlayers();
+            // A player renamed by the host while their tab was closed still carries the old
+            // name in sessionStorage — push the authoritative one back.
+            const row = playersRef.current.find((p) => p.id === msg.playerId);
+            if (row && msg.nickname && row.nickname !== msg.nickname) {
+              sendGame({ type: 'renamed', playerId: row.id, nickname: row.nickname });
+            }
+          })();
           // Re-send current state so (re)connecting players/screens catch up.
           const last = lastBroadcastRef.current;
           if (last) {
@@ -302,6 +359,12 @@ export function HostSessionPage() {
               questionCount: questionsRef.current.length,
             });
           }
+          return;
+        }
+        if (msg.type === 'rename') {
+          // Lobby only — once the game starts, renaming is the host's privilege.
+          if (phaseRef.current !== 'lobby') return;
+          void renamePlayer(msg.playerId, msg.nickname);
           return;
         }
         if (
@@ -370,6 +433,9 @@ export function HostSessionPage() {
             <Button variant="ghost" onClick={() => navigate('/games')}>
               <ArrowLeft size={16} /> До ігор
             </Button>
+            <Button variant="secondary" onClick={() => setPlayersOpen(true)}>
+              <Users size={15} /> Гравці ({players.length})
+            </Button>
             <a
               href={`/screen/${session.id}`}
               target="_blank"
@@ -421,12 +487,7 @@ export function HostSessionPage() {
             ) : (
               <div className="flex flex-wrap gap-2">
                 {players.map((p) => (
-                  <span
-                    key={p.id}
-                    className="animate-pop-in rounded-full bg-navy-50 px-3 py-1.5 text-sm font-medium text-navy-700"
-                  >
-                    {p.nickname}
-                  </span>
+                  <PlayerChip key={p.id} player={p} onRename={renamePlayer} />
                 ))}
               </div>
             )}
@@ -520,6 +581,13 @@ export function HostSessionPage() {
         </div>
       )}
 
+      <PlayersModal
+        open={playersOpen}
+        onClose={() => setPlayersOpen(false)}
+        players={players}
+        onRename={renamePlayer}
+      />
+
       <ShareModal
         open={shareOpen}
         onClose={() => setShareOpen(false)}
@@ -528,6 +596,65 @@ export function HostSessionPage() {
         fileName={`wisestep-game-${session.room_code}`}
       />
     </div>
+  );
+}
+
+/** Lobby chip that turns into an input when the host clicks it. */
+function PlayerChip({
+  player,
+  onRename,
+}: {
+  player: Player;
+  onRename: (playerId: string, nickname: string) => Promise<string | null>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(player.nickname);
+
+  const commit = async () => {
+    setEditing(false);
+    const clean = sanitizeNickname(value);
+    if (!clean || clean === player.nickname) {
+      setValue(player.nickname);
+      return;
+    }
+    const message = await onRename(player.id, clean);
+    if (message) setValue(player.nickname);
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={value}
+        maxLength={24}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') void commit();
+          if (e.key === 'Escape') {
+            setValue(player.nickname);
+            setEditing(false);
+          }
+        }}
+        aria-label={`Імʼя гравця ${player.nickname}`}
+        className="w-36 rounded-full border border-teal-500 bg-white px-3 py-1.5 text-sm font-medium text-navy-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setValue(player.nickname);
+        setEditing(true);
+      }}
+      title="Змінити імʼя"
+      className="animate-pop-in inline-flex items-center gap-1.5 rounded-full bg-navy-50 px-3 py-1.5 text-sm font-medium text-navy-700 hover:bg-navy-100"
+    >
+      {player.nickname}
+      <Pencil size={12} className="text-mist-500" />
+    </button>
   );
 }
 

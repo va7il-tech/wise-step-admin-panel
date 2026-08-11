@@ -99,6 +99,19 @@ export function BigScreenPage() {
           case 'gameover':
             setState({ kind: 'gameover', podium: msg.podium });
             break;
+          case 'renamed':
+            // Keep the standings in sync when the host renames someone mid-game.
+            // The lobby list needs nothing — it comes from presence, which the player re-tracks.
+            setState((prev) => {
+              const rename = (entries: LeaderboardEntry[]) =>
+                entries.map((e) =>
+                  e.playerId === msg.playerId ? { ...e, nickname: msg.nickname } : e,
+                );
+              if (prev.kind === 'reveal') return { ...prev, leaderboard: rename(prev.leaderboard) };
+              if (prev.kind === 'gameover') return { ...prev, podium: rename(prev.podium) };
+              return prev;
+            });
+            break;
         }
       })
       .on('presence', { event: 'sync' }, () => {

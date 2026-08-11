@@ -142,6 +142,12 @@ export type HostBroadcast =
   | {
       type: 'gameover';
       podium: LeaderboardEntry[];
+    }
+  | {
+      /** Host confirms a name change (asked for by the player, or done by the host itself) */
+      type: 'renamed';
+      playerId: string;
+      nickname: string;
     };
 
 export type PlayerBroadcast =
@@ -159,6 +165,12 @@ export type PlayerBroadcast =
       type: 'hello';
       playerId: string;
       nickname: string;
+    }
+  | {
+      /** Asks the host to change this player's display name. Honoured in the lobby only. */
+      type: 'rename';
+      playerId: string;
+      nickname: string;
     };
 
 export interface PresenceMeta {
@@ -171,6 +183,11 @@ export const PLAYER_EVENT = 'player'; // players -> host
 
 export function gameChannelName(roomCode: string): string {
   return `game:${roomCode}`;
+}
+
+/** Every nickname write goes through here — the DB checks char_length between 1 and 24. */
+export function sanitizeNickname(raw: string): string {
+  return raw.trim().replace(/\s+/g, ' ').slice(0, 24).trim();
 }
 
 /** Kahoot-style speed scoring: full points instantly, floor of 50% at the buzzer. */
