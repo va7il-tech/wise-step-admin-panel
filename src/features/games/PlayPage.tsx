@@ -36,6 +36,12 @@ type Stage =
       score: number;
       rank: number;
       totalPlayers: number;
+      /** The question just closed, so we can name the right answer. Null only if an
+       * older host is on the air and omits it from the reveal. */
+      question: LiveQuestion | null;
+      correctIndexes: number[];
+      /** What this player picked; null means they never answered in time. */
+      myAnswer: number[] | null;
     }
   | { kind: 'podium'; rank: number; score: number; podium: LeaderboardEntry[] };
 
@@ -186,6 +192,9 @@ export function PlayPage() {
                 score: mine?.score ?? 0,
                 rank: rank || msg.leaderboard.length,
                 totalPlayers: msg.leaderboard.length,
+                question: msg.question ?? null,
+                correctIndexes: msg.correctIndexes,
+                myAnswer,
               });
               break;
             }
@@ -554,30 +563,69 @@ export function PlayPage() {
   }
 
   if (stage.kind === 'result') {
+    const { question, correctIndexes, myAnswer } = stage;
+    // A correct player's own picks are exactly the row(s) already listed above,
+    // so only echo the answer back when it differed.
+    const showMyAnswer = !stage.correct;
     return (
       <div
         className={cn(
-          'flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center',
+          // Scrolls rather than clips: six options plus both blocks can outgrow a short phone.
+          'flex min-h-dvh flex-col overflow-y-auto px-6 py-8 text-center',
           stage.correct ? 'bg-success-700' : 'bg-error-700',
         )}
       >
-        <div className="flex size-20 items-center justify-center rounded-full bg-white/20">
-          {stage.correct ? (
-            <Check size={44} className="text-white" strokeWidth={3} />
-          ) : (
-            <X size={44} className="text-white" strokeWidth={3} />
+        <div className="m-auto flex w-full max-w-sm flex-col items-center gap-4">
+          <div className="flex size-20 items-center justify-center rounded-full bg-white/20">
+            {stage.correct ? (
+              <Check size={44} className="text-white" strokeWidth={3} />
+            ) : (
+              <X size={44} className="text-white" strokeWidth={3} />
+            )}
+          </div>
+          <h1 className="text-2xl font-black text-white">
+            {stage.correct ? 'Правильно!' : 'Не цього разу'}
+          </h1>
+          {stage.correct && <p className="text-xl font-bold text-white/90">+{stage.gained}</p>}
+
+          {question && (
+            <div className="w-full space-y-2 text-left">
+              <p className="text-sm font-semibold text-white/80">
+                {correctIndexes.length > 1 ? 'Правильні відповіді:' : 'Правильна відповідь:'}
+              </p>
+              {correctIndexes.map((i) => (
+                <ResultOption key={i} index={i} label={question.options[i] ?? ''} correct />
+              ))}
+
+              {showMyAnswer &&
+                (myAnswer === null ? (
+                  <p className="pt-2 text-sm font-semibold text-white/80">Ви не відповіли</p>
+                ) : (
+                  <>
+                    <p className="pt-2 text-sm font-semibold text-white/80">
+                      {myAnswer.length > 1 ? 'Ваші відповіді:' : 'Ваша відповідь:'}
+                    </p>
+                    {myAnswer.map((i) => (
+                      <ResultOption
+                        key={i}
+                        index={i}
+                        label={question.options[i] ?? ''}
+                        // Multi-answer picks can be partly right — mark each one on its own.
+                        correct={correctIndexes.includes(i)}
+                      />
+                    ))}
+                  </>
+                ))}
+            </div>
           )}
-        </div>
-        <h1 className="text-2xl font-black text-white">
-          {stage.correct ? 'Правильно!' : 'Не цього разу'}
-        </h1>
-        {stage.correct && <p className="text-xl font-bold text-white/90">+{stage.gained}</p>}
-        <div className="mt-2 rounded-2xl bg-white/15 px-5 py-3 text-white">
-          <p className="text-sm opacity-80">Ваше місце</p>
-          <p className="text-xl font-bold">
-            {stage.rank} з {stage.totalPlayers}
-          </p>
-          <p className="text-sm opacity-80">{stage.score} балів</p>
+
+          <div className="mt-2 rounded-2xl bg-white/15 px-5 py-3 text-white">
+            <p className="text-sm opacity-80">Ваше місце</p>
+            <p className="text-xl font-bold">
+              {stage.rank} з {stage.totalPlayers}
+            </p>
+            <p className="text-sm opacity-80">{stage.score} балів</p>
+          </div>
         </div>
       </div>
     );
@@ -604,6 +652,39 @@ export function PlayPage() {
         ))}
       </div>
     </Shell>
+  );
+}
+
+/**
+ * One option on the reveal screen. Keeps the colour + shape it had while answering
+ * (and on the big screen), so "the red triangle one" reads the same everywhere.
+ */
+function ResultOption({
+  index,
+  label,
+  correct,
+}: {
+  index: number;
+  label: string;
+  correct: boolean;
+}) {
+  const style = optionStyle(index);
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-3 rounded-2xl p-3 text-base font-bold text-white',
+        style.bg,
+        !correct && 'opacity-70',
+      )}
+    >
+      <style.icon size={18} fill="currentColor" className="shrink-0" />
+      <span className="min-w-0 flex-1">{label}</span>
+      {correct ? (
+        <Check size={18} className="shrink-0" strokeWidth={3} />
+      ) : (
+        <X size={18} className="shrink-0" strokeWidth={3} />
+      )}
+    </div>
   );
 }
 

@@ -29,7 +29,7 @@ type ScreenState =
   | { kind: 'loading' }
   | { kind: 'lobby'; quizTitle?: string }
   | { kind: 'question'; index: number; total: number; question: LiveQuestion; endsAt: number; answered: number; totalPlayers: number }
-  | { kind: 'reveal'; index: number; total: number; question: LiveQuestion | null; correctIndexes: number[]; tallies: number[]; leaderboard: LeaderboardEntry[] }
+  | { kind: 'reveal'; index: number; total: number; question: LiveQuestion; correctIndexes: number[]; tallies: number[]; leaderboard: LeaderboardEntry[] }
   | { kind: 'gameover'; podium: LeaderboardEntry[] };
 
 export function BigScreenPage() {
@@ -37,7 +37,6 @@ export function BigScreenPage() {
   const [session, setSession] = useState<Tables<'game_sessions'> | null>(null);
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [playerNames, setPlayerNames] = useState<string[]>([]);
-  const lastQuestionRef = useRef<{ index: number; total: number; question: LiveQuestion } | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -61,11 +60,6 @@ export function BigScreenPage() {
             setState({ kind: 'lobby', quizTitle: msg.quizTitle });
             break;
           case 'question':
-            lastQuestionRef.current = {
-              index: msg.index,
-              total: msg.total,
-              question: msg.question,
-            };
             setState({
               kind: 'question',
               index: msg.index,
@@ -83,19 +77,17 @@ export function BigScreenPage() {
                 : prev,
             );
             break;
-          case 'reveal': {
-            const last = lastQuestionRef.current;
+          case 'reveal':
             setState({
               kind: 'reveal',
               index: msg.index,
-              total: last?.total ?? 0,
-              question: last && last.index === msg.index ? last.question : null,
+              total: msg.total,
+              question: msg.question,
               correctIndexes: msg.correctIndexes,
               tallies: msg.tallies,
               leaderboard: msg.leaderboard,
             });
             break;
-          }
           case 'gameover':
             setState({ kind: 'gameover', podium: msg.podium });
             break;

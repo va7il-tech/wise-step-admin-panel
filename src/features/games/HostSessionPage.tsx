@@ -21,6 +21,7 @@ import {
   gameChannelName,
   sameAnswerSet,
   sanitizeNickname,
+  toLiveQuestion,
   type HostBroadcast,
   type LeaderboardEntry,
   type PlayerBroadcast,
@@ -203,6 +204,8 @@ export function HostSessionPage() {
     broadcast({
       type: 'reveal',
       index: indexRef.current,
+      total: questionsRef.current.length,
+      question: toLiveQuestion(question),
       correctIndexes: question.correct_indexes,
       tallies: newTallies,
       leaderboard: board,
@@ -238,18 +241,11 @@ export function HostSessionPage() {
       const questionEndsAt = startedAt + question.time_limit_seconds * 1000;
       setEndsAt(questionEndsAt);
 
-      const options = Array.isArray(question.options) ? (question.options as string[]) : [];
       broadcast({
         type: 'question',
         index,
         total: questionsRef.current.length,
-        question: {
-          text: question.question_text,
-          options,
-          timeLimitSeconds: question.time_limit_seconds,
-          points: question.points,
-          multiple: question.correct_indexes.length > 1,
-        },
+        question: toLiveQuestion(question),
         endsAt: questionEndsAt,
         startedAt,
       });

@@ -1,4 +1,4 @@
-import type { Json } from './database.types';
+import type { Json, Tables } from './database.types';
 
 /* ---------- Form builder domain types (stored in forms.schema / forms.style) ---------- */
 
@@ -96,6 +96,17 @@ export interface LiveQuestion {
   multiple: boolean;
 }
 
+/** Strips a quiz_questions row down to what players may see. */
+export function toLiveQuestion(row: Tables<'quiz_questions'>): LiveQuestion {
+  return {
+    text: row.question_text,
+    options: Array.isArray(row.options) ? (row.options as string[]) : [],
+    timeLimitSeconds: row.time_limit_seconds,
+    points: row.points,
+    multiple: row.correct_indexes.length > 1,
+  };
+}
+
 export interface LeaderboardEntry {
   playerId: string;
   nickname: string;
@@ -134,6 +145,13 @@ export type HostBroadcast =
   | {
       type: 'reveal';
       index: number;
+      /**
+       * Question and total are repeated here so the reveal stands alone: on `hello` the host
+       * replays only the last broadcast, so a client that reloads mid-reveal never sees the
+       * preceding `question` message.
+       */
+      total: number;
+      question: LiveQuestion;
       correctIndexes: number[];
       /** Answer count per option index */
       tallies: number[];
