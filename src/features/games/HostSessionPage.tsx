@@ -138,7 +138,11 @@ export function HostSessionPage() {
         .from('game_players')
         .update({ nickname })
         .eq('id', playerId);
-      if (error) return 'Не вдалося змінити імʼя';
+      if (error) {
+        // Usually RLS: only super_admin/editor may write game_players.
+        console.error('[rename] game_players update failed', error);
+        return 'Не вдалося змінити імʼя';
+      }
 
       playersRef.current = playersRef.current.map((p) =>
         p.id === playerId ? { ...p, nickname } : p,
@@ -609,6 +613,7 @@ function PlayerChip({
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(player.nickname);
+  const [error, setError] = useState<string | null>(null);
 
   const commit = async () => {
     setEditing(false);
@@ -618,43 +623,47 @@ function PlayerChip({
       return;
     }
     const message = await onRename(player.id, clean);
+    // A failed write (usually RLS) must not look like it worked.
+    setError(message);
     if (message) setValue(player.nickname);
   };
 
-  if (editing) {
-    return (
-      <input
-        autoFocus
-        value={value}
-        maxLength={24}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={() => void commit()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') void commit();
-          if (e.key === 'Escape') {
-            setValue(player.nickname);
-            setEditing(false);
-          }
-        }}
-        aria-label={`Імʼя гравця ${player.nickname}`}
-        className="w-36 rounded-full border border-teal-500 bg-white px-3 py-1.5 text-sm font-medium text-navy-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-      />
-    );
-  }
-
   return (
-    <button
-      type="button"
-      onClick={() => {
-        setValue(player.nickname);
-        setEditing(true);
-      }}
-      title="Змінити імʼя"
-      className="animate-pop-in inline-flex items-center gap-1.5 rounded-full bg-navy-50 px-3 py-1.5 text-sm font-medium text-navy-700 hover:bg-navy-100"
-    >
-      {player.nickname}
-      <Pencil size={12} className="text-mist-500" />
-    </button>
+    <span className="inline-flex flex-col gap-0.5">
+      {editing ? (
+        <input
+          autoFocus
+          value={value}
+          maxLength={24}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={() => void commit()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void commit();
+            if (e.key === 'Escape') {
+              setValue(player.nickname);
+              setEditing(false);
+            }
+          }}
+          aria-label={`Імʼя гравця ${player.nickname}`}
+          className="w-36 rounded-full border border-teal-500 bg-white px-3 py-1.5 text-sm font-medium text-navy-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setValue(player.nickname);
+            setError(null);
+            setEditing(true);
+          }}
+          title="Змінити імʼя"
+          className="animate-pop-in inline-flex items-center gap-1.5 rounded-full bg-navy-50 px-3 py-1.5 text-sm font-medium text-navy-700 hover:bg-navy-100"
+        >
+          {player.nickname}
+          <Pencil size={12} className="text-mist-500" />
+        </button>
+      )}
+      {error && <span className="px-2 text-xs font-medium text-error-500">{error}</span>}
+    </span>
   );
 }
 
