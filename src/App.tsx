@@ -3,6 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { AdminLayout } from '@/components/AdminLayout';
 import { Spinner } from '@/components/ui';
+import { isDemoMode } from '@/lib/supabase';
+import { DemoBanner } from '@/demo/DemoBanner';
 
 const LoginPage = lazy(() =>
   import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })),
@@ -99,6 +101,7 @@ export default function App() {
             </Route>
           </Routes>
         </Suspense>
+        {isDemoMode && <DemoBanner />}
       </BrowserRouter>
     </AuthProvider>
   );

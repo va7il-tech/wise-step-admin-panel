@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3FA34D"/><stop offset="1" stop-color="#1E5B3A"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#g)"/>
+<circle cx="1020" cy="94.5" r="283.5" fill="#fff" opacity="0.08"/>
+<circle cx="120" cy="598.5" r="220.5" fill="#fff" opacity="0.07"/>
+<path d="M0 491.40000000000003 L264 315 L480 441 L744 264.59999999999997 L1200 472.5 L1200 630 L0 630 Z" fill="#152837" opacity="0.18"/>
+<text x="50%" y="55%" text-anchor="middle" dominant-baseline="middle" font-size="201.6">🏕️</text>
+
+</svg>

@@ -20,6 +20,21 @@ All UI copy is Ukrainian; code and comments are English.
 - Supabase: Postgres + Auth + Storage + Realtime (broadcast + presence)
 - `qr-code-styling` for QR codes with the org logo embedded (client-side)
 
+## Demo mode (portfolio)
+
+`VITE_DEMO_MODE=true` swaps the Supabase client for an in-browser stand-in (`src/demo/`) seeded with fictional data — no backend or keys needed:
+
+```bash
+npm run dev:demo     # local
+npm run build:demo   # static build into dist/
+```
+
+- Data lives in the visitor's `localStorage`; a floating panel resets it and switches role (super admin / editor / viewer).
+- Login is prefilled (`admin@demo.wise-step.org` / `demo1234`).
+- Live quizzes work across tabs of one browser (BroadcastChannel), and 4 bot players join every new room. Phones scanning the QR code can't join, since there is no shared server.
+
+Deploy it as a **separate** Vercel project (never the production one): set Build Command to `npm run build:demo`, or add the env var `VITE_DEMO_MODE=true`.
+
 ## Setup
 
 ### 1. Install

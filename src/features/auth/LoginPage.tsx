@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, isDemoMode } from '@/lib/supabase';
+import { DEMO_ADMIN_EMAIL, DEMO_PASSWORD } from '@/demo/client';
 import { useAuth } from './AuthContext';
 import { Button, Field, Input, Card } from '@/components/ui';
 
@@ -24,7 +25,9 @@ export function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginForm>();
+  } = useForm<LoginForm>({
+    defaultValues: isDemoMode ? { email: DEMO_ADMIN_EMAIL, password: DEMO_PASSWORD } : undefined,
+  });
   const {
     register: registerReset,
     handleSubmit: handleResetSubmit,
@@ -77,6 +80,16 @@ export function LoginPage() {
               Supabase не налаштовано. Скопіюйте <code>.env.example</code> у <code>.env</code> та
               вкажіть ключі проєкту.
             </p>
+          )}
+          {isDemoMode && !resetMode && (
+            <div className="mb-4 rounded-xl bg-teal-50 p-3 text-xs leading-relaxed text-teal-800">
+              <p className="font-semibold">Демо-версія з вигаданими даними</p>
+              <p className="mt-1">
+                Дані для входу вже підставлені — просто натисніть «Увійти». Також можна зайти як{' '}
+                <code>editor@demo.wise-step.org</code> або <code>viewer@demo.wise-step.org</code>{' '}
+                (пароль <code>{DEMO_PASSWORD}</code>).
+              </p>
+            </div>
           )}
           {resetMode ? (
             resetSent ? (

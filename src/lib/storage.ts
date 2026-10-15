@@ -40,6 +40,8 @@ export async function uploadFormAttachment(file: File): Promise<string> {
  * attribute is ignored cross-origin, so we rely on Supabase's `?download=` (Content-Disposition).
  */
 export function attachmentDownloadUrl(url: string, name: string): string {
+  // Demo-mode uploads are data:/blob: URLs and same-origin files, where a query string breaks them.
+  if (!/^https?:/.test(url)) return url;
   return `${url}?download=${encodeURIComponent(name)}`;
 }
 
